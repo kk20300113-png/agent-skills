@@ -11,101 +11,251 @@ Use this skill only for complex, high-value tasks where planning quality matters
 
 **Before every task, list and confirm the following roles:**
 
-### 1. Executor (Single choice)
-- **1a: Kimi** - Default executor for most tasks
-- **1b: Gemini** - Alternative executor with different capabilities
+### 1. Planner (Single choice)
+- **1a: Claude Opus 4.6** - Primary planner for complex task decomposition
 
-### 2. Planner (Single choice)
-- **2a: Claude Opus 4.6** - Primary planner for complex task decomposition
+### 2. Executor (Single choice)
+- **2a: Kimi** - Default executor for Kimi Code CLI
+- **2b: Gemini** - Alternative executor with different capabilities
 
-### 3. Plan Reviewer/Critic (Single choice)
-- **3a: Gemini** - Review and critique of plans
-- **3b: Claude Opus** - Alternative reviewer with different perspective  
+### 3. Primary Reviewer (Single choice)
+- **3a: Gemini** - Review and critique of execution output
+- **3b: Claude Opus** - Alternative reviewer with different perspective
 - **3c: ChatGPT (latest frontier model, e.g., 4.5.4)** - Most current frontier model
 
-**User confirmation format:** "Use roles 1a, 2a, 3b" or specify each choice.
+### 4. Secondary Reviewer (Optional - User requested only)
+- **4a: Gemini** - Second independent review (if 3a not selected)
+- **4b: Claude Opus** - Second independent review (if 3b not selected)
+- **4c: ChatGPT latest** - Second independent review (if 3c not selected)
+
+**User confirmation format:**
+- Single review: `"Use roles 1a, 2a, 3c"`
+- Dual review: `"Use roles 1a, 2a, 3c, 4b"`
+
+**Reviewer 2 Rule:** Only invoke if user explicitly includes 4a/4b/4c in role selection.
 
 ---
 
-## Workflow defaults
+## Execution Modes
 
-Always start by showing:
-- Roles
-- Handoffs
-- Review checkpoints
-- Next action
+### Mode 1: Default (Token Efficient)
+- **Workflow:** Planner → Executor V1 → Primary Review → Executor V2 → Judge
+- **Token Cost:** ~65-90K
+- **Best For:** Most tasks, quick iterations, prototyping
+- **Reviewers:** 1 (Primary only)
 
-Never allow more than one writer/executor at a time.
+### Mode 2: Deep Review (High Quality)
+- **Workflow:** Planner → Executor V1 → Dual Review → Executor V2 → Judge
+- **Token Cost:** ~80-115K (+15-25K for second reviewer)
+- **Best For:** Critical code, complex systems, high-stakes deliverables
+- **Reviewers:** 2 (Primary + Secondary, parallel execution)
 
-## Start-of-task protocol
+### Mode 3: Auto
+- **Selection Logic:**
+  - Complex tasks (>500 lines expected) → Deep Review Mode
+  - Simple tasks (<100 lines) → Default Mode
+  - Medium complexity → Ask user preference
 
-1. **List and confirm roles** using the numbered format above
-2. Build a compact brief:
+**Mode Selection Format:** `"Use mode default/deep/auto"`
+
+---
+
+## Workflow Sequence
+
+### Phase 1: Planning
+**Agent:** Planner (Claude Opus 4.6)  
+**Input:** Task description, constraints, success criteria  
+**Output:** Detailed execution plan  
+**Prompt:** `codex-brief-for-claude-plan.md`
+
+### Phase 2: Execution V1
+**Agent:** Executor (Kimi/Gemini)  
+**Input:** Plan from Phase 1  
+**Output:** Working implementation (V1)  
+**Prompt:** `executor-implement-plan.md`
+
+### Phase 3A: Primary Review
+**Agent:** Primary Reviewer (selected in role 3)  
+**Input:** V1 output from Executor  
+**Output:** Structured critique of execution  
+**Prompt:** `reviewer-primary-critique.md`
+
+### Phase 3B: Secondary Review (Optional - Deep Review Mode only)
+**Agent:** Secondary Reviewer (selected in role 4)  
+**Input:** V1 output from Executor  
+**Output:** Independent structured critique  
+**Prompt:** `reviewer-secondary-critique.md`  
+**Execution:** Parallel with Phase 3A
+
+### Phase 4: Improvement
+**Agent:** Executor (Kimi/Gemini)  
+**Input:** V1 output + Review(s)  
+**Output:** Improved implementation (V2)  
+**Prompt:** `executor-improvement.md`
+
+### Phase 5: Final Judgment
+**Agent:** Judge (Kimi as coordinator)  
+**Input:** V2 output + Review(s)  
+**Output:** Final verdict and deliverables  
+**Prompt:** `codex-judge-agent-outputs.md`
+
+---
+
+## Token Optimization Guidelines
+
+### Cost Reduction Strategies
+
+1. **Default Mode First**
+   - Start with single reviewer for most tasks
+   - Only escalate to Deep Review if quality issues found
+
+2. **Conditional Second Reviewer**
+   - Only invoke Reviewer 2 if:
+     - User explicitly requests (Deep Review mode)
+     - Primary reviewer finds >5 critical issues
+     - Task is marked as high-stakes/critical
+
+3. **Parallel Reviews (Deep Mode)**
+   - Run Reviewer 1 and Reviewer 2 simultaneously
+   - Reduces wall-clock time, not token cost
+
+4. **Review Deduplication**
+   - Before Phase 4, merge overlapping feedback
+   - Prioritize unique issues
+   - Reduces input tokens for Executor V2
+
+5. **Context Management**
+   - Pass only relevant code snippets to reviewers
+   - Summarize large outputs before review handoff
+
+### Token Budget Guide
+
+| Task Size | Recommended Mode | Est. Tokens |
+|-----------|------------------|-------------|
+| <100 lines | Default | 65-75K |
+| 100-500 lines | Default | 75-90K |
+| 500-1000 lines | Deep Review | 90-115K |
+| >1000 lines | Deep Review + Chunking | 115K+ |
+
+---
+
+## Review Standards
+
+When reviewing executor output, prioritize:
+1. **Correctness bugs** - Does it actually work?
+2. **Regressions** - Did anything break?
+3. **Hidden assumptions** - Unstated dependencies?
+4. **Missing edge cases** - What scenarios weren't considered?
+5. **Missing tests** - Is there adequate test coverage?
+6. **Unnecessary complexity** - Can it be simpler?
+
+If another agent is correct, say exactly what is strong.  
+If another agent is weak, name the failure mode directly.
+
+---
+
+## Start-of-Task Protocol
+
+1. **List and confirm roles** using the 4-role format above
+2. **Select mode** (Default/Deep/Auto)
+3. **Build a compact brief:**
    - Task
    - Constraints
    - Success criteria
    - Risk areas
-3. Run the provider freshness check before producing handoffs:
-   - `python C:\Users\kahye\.codex\skills\advanced-agent-orchestrator\scripts\check_provider_freshness.py --state C:\Users\kahye\.codex\skills\advanced-agent-orchestrator\references\provider-defaults.json --repo-state <repo>\ai-collab\config\provider-defaults.json`
-4. If drift is detected:
-   - Show the current approved value
-   - Show the detected official value
-   - Explain why the detected value is more current
-   - Ask for approval before updating any stored defaults
-5. If the user approves the update, rerun the checker with `--approve`.
-6. After the freshness check is resolved, produce the exact next handoff prompt or command for each stage.
+4. **Run provider freshness check** before producing handoffs
+5. **After freshness check resolved**, produce exact handoff prompt for Phase 1
 
-## Default execution chain
+---
 
-For every advanced task, use this sequence unless the user overrides a role:
-1. Role confirmation (mandatory first step)
-2. Brief construction
-3. Planner creates plan
-4. Reviewer critiques plan
-5. Planner challenges/refines based on critique
-6. Executor implements the final plan
-7. Final review and judgment
+## Local Files to Use When Present
 
-## Review standards
-
-When reviewing any agent output, prioritize:
-1. Correctness bugs
-2. Regressions
-3. Hidden assumptions
-4. Missing edge cases
-5. Missing tests
-6. Unnecessary complexity
-
-If another agent is correct, say exactly what is strong.
-If another agent is weak, name the failure mode directly.
-
-## Local files to use when present
-
-If the current workspace contains these files, use them:
 - `AI-COLLAB-START-HERE.md`
 - `CLAUDE.md`
 - `.gemini/GEMINI.md`
 - `ai-collab/config/provider-defaults.json`
 - `ai-collab/prompts/codex-brief-for-claude-plan.md`
-- `ai-collab/prompts/gemini-critique-claude-plan.md`
-- `ai-collab/prompts/claude-challenge-plan.md`
-- `ai-collab/prompts/codex-review-executor-output.md`
+- `ai-collab/prompts/executor-implement-plan.md`
+- `ai-collab/prompts/reviewer-primary-critique.md`
+- `ai-collab/prompts/reviewer-secondary-critique.md`
+- `ai-collab/prompts/executor-improvement.md`
 - `ai-collab/prompts/codex-judge-agent-outputs.md`
 
-## Freshness policy
+---
+
+## Freshness Policy
 
 - The checker uses official provider pages only.
 - Without user approval, do not rewrite stored defaults.
 - With user approval, update both:
   - `C:\Users\kahye\.codex\skills\advanced-agent-orchestrator\references\provider-defaults.json`
-  - the repo-local `ai-collab/config/provider-defaults.json`
-- Prefer provider aliases where the provider guarantees they follow the latest model family. Use provider-specific model IDs where no durable alias exists.
+  - The repo-local `ai-collab/config/provider-defaults.json`
+- Prefer provider aliases where the provider guarantees they follow the latest model family.
 
-## Persistent setup guidance
+---
 
-For long-term reuse, prefer this stack:
-1. ChatGPT Custom Instructions for the short always-on orchestration rule
-2. This skill for the full advanced workflow
-3. Repo-local Claude and Gemini memory files for project-specific behavior
+## Conflict Resolution
 
-Read `references/chatgpt-custom-instructions.md` when the user wants the exact text to paste into ChatGPT settings.
+When dual reviewers disagree:
+1. **Critical issues** - Always fix if either reviewer mentions
+2. **Both mention same issue** - Definitely fix, high confidence
+3. **Reviewers contradict** - Executor decides with documented rationale
+4. **Unclear priority** - Ask user for clarification
+
+---
+
+## Example User Interaction
+
+**User:**
+```
+Use advanced-agent-orchestrator skill to build a carbon credit calculator
+```
+
+**Kimi:**
+```
+🎯 Advanced Agent Orchestrator
+
+Select Mode:
+- [x] Default (Single reviewer, ~65-90K tokens)
+- [ ] Deep Review (Dual reviewers, ~80-115K tokens)
+- [ ] Auto (System decides based on complexity)
+
+Select Roles:
+1. Planner:
+   - 1a: Claude Opus 4.6
+
+2. Executor:
+   - 2a: Kimi (You)
+   - 2b: Gemini
+
+3. Primary Reviewer:
+   - 3a: Gemini
+   - 3b: Claude Opus
+   - 3c: ChatGPT latest
+
+Add Secondary Reviewer? (+15-25K tokens)
+- [ ] 4a: Gemini (only if 3a not selected)
+- [ ] 4b: Claude Opus (only if 3b not selected)
+- [ ] 4c: ChatGPT latest (only if 3c not selected)
+
+Confirm: Use mode [default/deep/auto], roles [1a], [2a/2b], [3a/3b/3c], [4a/4b/4c or none]
+```
+
+**User:**
+```
+Use mode default, roles 1a, 2a, 3c
+```
+
+**Kimi:**
+```
+✅ Confirmed:
+- Mode: Default (Single reviewer)
+- Planner: Claude Opus 4.6 (1a)
+- Executor: Kimi (2a)
+- Primary Reviewer: ChatGPT latest (3c)
+- Secondary Reviewer: None
+
+Estimated tokens: 65-90K
+
+[Proceeds with Phase 1: Planning...]
+```
