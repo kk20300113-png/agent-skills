@@ -1,0 +1,7 @@
+interface:
+  display_name: "Advanced Agent Orchestrator"
+  short_description: "Complex-task Codex, Claude, Gemini, Kimi workflow"
+  default_prompt: "Use $advanced-agent-orchestrator to confirm agent roles, check the latest official model defaults, and produce the exact handoffs for Claude planning, Gemini critique, execution, and Codex review."
+
+policy:
+  allow_implicit_invocation: true

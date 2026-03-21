@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "last_checked_at": "2026-03-17T05:33:41+00:00",
+  "providers": {
+    "anthropic": {
+      "family": "Claude Opus",
+      "roles": [
+        "planner",
+        "challenger"
+      ],
+      "approved_alias": "opus",
+      "approved_label": "Claude Opus 4.6",
+      "approved_model_id": "claude-opus-4-6",
+      "source_urls": [
+        "https://docs.anthropic.com/en/docs/claude-code/model-config",
+        "https://docs.anthropic.com/en/docs/about-claude/models/all-models"
+      ],
+      "last_checked_at": "2026-03-17T05:33:41+00:00",
+      "reason": "Anthropic's Claude Code alias table states that `opus` tracks the current Opus model for complex reasoning."
+    },
+    "google": {
+      "family": "Gemini",
+      "roles": [
+        "plan_reviewer",
+        "executor"
+      ],
+      "approved_alias": "gemini-3.1-pro-preview",
+      "approved_label": "Gemini 3 Pro Preview",
+      "approved_model_id": "gemini-3.1-pro-preview",
+      "source_urls": [
+        "https://ai.google.dev/models/gemini",
+        "https://ai.google.dev/gemini-api/docs/changelog"
+      ],
+      "last_checked_at": "2026-03-17T05:33:41+00:00",
+      "reason": "Google's Gemini models page and changelog identify the latest Pro-series model code exposed for reasoning-heavy API use."
+    },
+    "moonshot": {
+      "family": "Kimi",
+      "roles": [
+        "alternate_executor"
+      ],
+      "approved_alias": "kimi-k2-thinking",
+      "approved_label": "Kimi K2 Thinking",
+      "approved_model_id": "kimi-k2-thinking",
+      "base_url": "https://api.moonshot.ai/v1",
+      "source_urls": [
+        "https://platform.moonshot.ai/blog/posts/Kimi_API_Newsletter",
+        "https://platform.moonshot.ai/blog/posts/changelog",
+        "https://platform.moonshot.ai/docs/guide/use-kimi-k2-thinking-model"
+      ],
+      "last_checked_at": "2026-03-17T05:33:41+00:00",
+      "reason": "Moonshot's official newsletter and release log identify the current Kimi K2 reasoning model line, and the quick-start guide documents the OpenAI-compatible base URL."
+    },
+    "openai": {
+      "family": "OpenAI Codex",
+      "roles": [
+        "reviewer",
+        "judge"
+      ],
+      "approved_alias": "gpt-5.2-codex",
+      "approved_label": "GPT-5.2-Codex",
+      "approved_model_id": "gpt-5.2-codex",
+      "source_urls": [
+        "https://platform.openai.com/docs/models/gpt-5.2-codex",
+        "https://platform.openai.com/docs/models"
+      ],
+      "last_checked_at": "2026-03-17T05:33:41+00:00",
+      "reason": "OpenAI's official model pages identify the current Codex-aligned coding model family for agentic coding tasks."
+    }
+  },
+  "workflow": {
+    "brief_owner": {
+      "provider": "openai",
+      "model": "Codex Desktop",
+      "label": "Codex Desktop"
+    },
+    "planner": {
+      "provider": "anthropic",
+      "model": "opus",
+      "label": "Claude Opus 4.6"
+    },
+    "plan_reviewer": {
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "label": "Gemini 3 Pro Preview"
+    },
+    "challenger": {
+      "provider": "anthropic",
+      "model": "opus",
+      "label": "Claude Opus 4.6"
+    },
+    "executor": {
+      "provider": "google",
+      "model": "gemini-3.1-pro-preview",
+      "label": "Gemini 3 Pro Preview"
+    },
+    "alternate_executor": {
+      "provider": "moonshot",
+      "model": "kimi-k2-thinking",
+      "label": "Kimi K2 Thinking"
+    },
+    "reviewer": {
+      "provider": "openai",
+      "model": "Codex Desktop",
+      "label": "Codex Desktop"
+    },
+    "judge": {
+      "provider": "openai",
+      "model": "Codex Desktop",
+      "label": "Codex Desktop"
+    }
+  }
+}
