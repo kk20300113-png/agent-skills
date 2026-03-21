@@ -7,6 +7,63 @@ description: Use when the user wants a cost-aware, complex-task orchestration wo
 
 Use this skill only for complex, high-value tasks where planning quality matters more than raw speed.
 
+---
+
+## 🛑 STOP - YOU MUST ASK USER BEFORE PROCEEDING
+
+**DO NOT execute any workflow steps until the user confirms roles.**
+
+When this skill is invoked, you MUST immediately pause and display the role selection menu below. **WAIT for the user's explicit response** before doing anything else.
+
+### Display This Exact Prompt:
+
+```
+🎯 Advanced Agent Orchestrator - Role Selection Required
+
+Before proceeding, you MUST select roles for this task.
+
+Select Mode:
+- [ ] Default (Single reviewer, ~65-90K tokens)
+- [ ] Deep Review (Dual reviewers, ~80-115K tokens)
+- [ ] Auto (System decides based on complexity)
+
+Select Roles:
+1. Planner:
+   - 1a: Claude Opus 4.6
+
+2. Executor:
+   - 2a: Kimi (You)
+   - 2b: Gemini
+
+3. Primary Reviewer:
+   - 3a: Gemini
+   - 3b: Claude Opus
+   - 3c: ChatGPT latest
+
+4. Secondary Reviewer (optional, +15-25K tokens):
+   - [ ] 4a: Gemini (only if 3a not selected)
+   - [ ] 4b: Claude Opus (only if 3b not selected)
+   - [ ] 4c: ChatGPT latest (only if 3c not selected)
+
+**Confirm your selection:**
+Use mode [default/deep/auto], roles [1a], [2a/2b], [3a/3b/3c], [4a/4b/4c or none]
+```
+
+### YOU MUST WAIT FOR USER RESPONSE
+
+Do NOT proceed to:
+- Provider freshness checks
+- Planning phase
+- Any execution
+
+**UNTIL the user responds with their role selection.**
+
+**Acceptable user responses:**
+- `"Use mode default, roles 1a, 2a, 3c"` → Single review
+- `"Use mode deep, roles 1a, 2a, 3c, 4b"` → Dual review
+
+---
+
 ## Role Confirmation Protocol (MANDATORY)
 
 **Before every task, list and confirm the following roles:**
