@@ -1,16 +1,14 @@
 {
-  "schema_version": 1,
-  "last_checked_at": "2026-03-17T05:33:41+00:00",
+  "schema_version": 3,
+  "last_checked_at": "2026-03-24T00:00:00+00:00",
   "providers": {
     "anthropic": {
       "family": "Claude Opus",
-      "roles": [
-        "planner",
-        "challenger"
-      ],
+      "roles": ["planner", "reviewer", "challenger"],
       "approved_alias": "opus",
       "approved_label": "Claude Opus 4.6",
       "approved_model_id": "claude-opus-4-6",
+      "strengths": "Complex reasoning, architecture design, strategic thinking",
       "source_urls": [
         "https://docs.anthropic.com/en/docs/claude-code/model-config",
         "https://docs.anthropic.com/en/docs/about-claude/models/all-models"
@@ -20,13 +18,11 @@
     },
     "google": {
       "family": "Gemini",
-      "roles": [
-        "plan_reviewer",
-        "executor"
-      ],
+      "roles": ["reviewer", "plan_reviewer", "executor"],
       "approved_alias": "gemini-3.1-pro-preview",
-      "approved_label": "Gemini 3 Pro Preview",
+      "approved_label": "Gemini 3.1 Pro",
       "approved_model_id": "gemini-3.1-pro-preview",
+      "strengths": "Balanced speed/quality, comprehensive review, gap analysis",
       "source_urls": [
         "https://ai.google.dev/models/gemini",
         "https://ai.google.dev/gemini-api/docs/changelog"
@@ -36,12 +32,11 @@
     },
     "moonshot": {
       "family": "Kimi",
-      "roles": [
-        "alternate_executor"
-      ],
+      "roles": ["executor", "alternate_executor"],
       "approved_alias": "kimi-k2-thinking",
       "approved_label": "Kimi K2 Thinking",
       "approved_model_id": "kimi-k2-thinking",
+      "strengths": "Code generation, CLI tasks, technical implementation",
       "base_url": "https://api.moonshot.ai/v1",
       "source_urls": [
         "https://platform.moonshot.ai/blog/posts/Kimi_API_Newsletter",
@@ -53,61 +48,226 @@
     },
     "openai": {
       "family": "OpenAI Codex",
-      "roles": [
-        "reviewer",
-        "judge"
-      ],
+      "roles": ["reviewer"],
       "approved_alias": "gpt-5.2-codex",
       "approved_label": "GPT-5.2-Codex",
       "approved_model_id": "gpt-5.2-codex",
+      "strengths": "Current knowledge, general-purpose coding, code review",
       "source_urls": [
         "https://platform.openai.com/docs/models/gpt-5.2-codex",
         "https://platform.openai.com/docs/models"
       ],
       "last_checked_at": "2026-03-17T05:33:41+00:00",
       "reason": "OpenAI's official model pages identify the current Codex-aligned coding model family for agentic coding tasks."
+    },
+    "gemini_cli": {
+      "family": "Gemini CLI",
+      "roles": ["executor", "reviewer", "plan_reviewer"],
+      "invocation_type": "cli",
+      "cli_command": "gemini",
+      "approved_alias": "gemini-2.5-pro",
+      "approved_label": "Gemini 2.5 Pro (CLI)",
+      "approved_model_id": "gemini-2.5-pro",
+      "strengths": "Local terminal-based execution, no API key required for personal use",
+      "install_docs": "https://github.com/google-gemini/gemini-cli",
+      "source_urls": [
+        "https://github.com/google-gemini/gemini-cli",
+        "https://ai.google.dev/gemini-api/docs/gemini-cli"
+      ],
+      "last_checked_at": "2026-03-23T00:00:00+00:00",
+      "reason": "Google's Gemini CLI (npm: @google/gemini-cli) supports --model flag and stdin piping, enabling local terminal-based phase invocation without writing API call code.",
+      "setup": {
+        "install": "npm install -g @google/gemini-cli",
+        "auth": "gemini auth login  (opens browser OAuth — no API key required for personal use)",
+        "verify": "gemini --version"
+      }
     }
   },
   "workflow": {
-    "brief_owner": {
-      "provider": "openai",
-      "model": "Codex Desktop",
-      "label": "Codex Desktop"
+    "agent_selection": {
+      "description": "User MUST explicitly select an agent for every phase. No defaults, no auto-selection.",
+      "policy": "mandatory_user_selection",
+      "phase_0_role_preferences": "User declares preferred agent per role (Planner, Executor, Reviewer) upfront. Confirmed or overridden at each phase boundary."
     },
-    "planner": {
-      "provider": "anthropic",
-      "model": "opus",
-      "label": "Claude Opus 4.6"
+    "phase_1_planner": {
+      "description": "Creates detailed, actionable execution plan",
+      "user_selection": "required",
+      "options": [
+        {
+          "provider": "anthropic",
+          "model": "opus",
+          "label": "Claude Opus 4.6",
+          "strengths": "Complex reasoning, architecture decisions"
+        },
+        {
+          "provider": "google",
+          "model": "gemini-3.1-pro-preview",
+          "label": "Gemini 3.1 Pro",
+          "strengths": "Fast planning, gap analysis"
+        },
+        {
+          "provider": "moonshot",
+          "model": "kimi-k2-thinking",
+          "label": "Kimi K2 Thinking",
+          "strengths": "Code-heavy tasks"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-5.2-codex",
+          "label": "GPT-5.2-Codex",
+          "strengths": "Current knowledge, general-purpose"
+        }
+      ]
     },
-    "plan_reviewer": {
-      "provider": "google",
-      "model": "gemini-3.1-pro-preview",
-      "label": "Gemini 3 Pro Preview"
+    "phase_2_plan_reviewer": {
+      "description": "Reviews and validates plan before execution",
+      "user_selection": "required",
+      "run_or_skip": "user_must_explicitly_choose",
+      "options": [
+        {
+          "provider": "google",
+          "model": "gemini-3.1-pro-preview",
+          "label": "Gemini 3.1 Pro",
+          "strengths": "Comprehensive review, gap analysis"
+        },
+        {
+          "provider": "anthropic",
+          "model": "opus",
+          "label": "Claude Opus 4.6",
+          "strengths": "Strategic review, architecture validation"
+        },
+        {
+          "provider": "moonshot",
+          "model": "kimi-k2-thinking",
+          "label": "Kimi K2 Thinking",
+          "strengths": "Code-focused plan validation"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-5.2-codex",
+          "label": "GPT-5.2-Codex",
+          "strengths": "General-purpose plan review"
+        }
+      ],
+      "cost_if_enabled": "+15-25K tokens, +60-90 seconds"
     },
-    "challenger": {
-      "provider": "anthropic",
-      "model": "opus",
-      "label": "Claude Opus 4.6"
+    "phase_3_executor": {
+      "description": "Implements the solution based on plan and review",
+      "user_selection": "required",
+      "options": [
+        {
+          "provider": "moonshot",
+          "model": "kimi-k2-thinking",
+          "label": "Kimi K2 Thinking",
+          "strengths": "Code generation, CLI tasks"
+        },
+        {
+          "provider": "google",
+          "model": "gemini-3.1-pro-preview",
+          "label": "Gemini 3.1 Pro",
+          "strengths": "Balanced execution, reasoning + code"
+        },
+        {
+          "provider": "anthropic",
+          "model": "opus",
+          "label": "Claude Opus 4.6",
+          "strengths": "Complex implementations requiring reasoning"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-5.2-codex",
+          "label": "GPT-5.2-Codex",
+          "strengths": "General-purpose implementation"
+        }
+      ]
     },
-    "executor": {
-      "provider": "google",
-      "model": "gemini-3.1-pro-preview",
-      "label": "Gemini 3 Pro Preview"
+    "phase_4_reviewer_1": {
+      "description": "Primary code review - correctness, bugs, quality (blind judge)",
+      "user_selection": "required",
+      "options": [
+        {
+          "provider": "google",
+          "model": "gemini-3.1-pro-preview",
+          "label": "Gemini 3.1 Pro",
+          "strengths": "Technical correctness, comprehensive review"
+        },
+        {
+          "provider": "anthropic",
+          "model": "opus",
+          "label": "Claude Opus 4.6",
+          "strengths": "Strategic review, architecture concerns"
+        },
+        {
+          "provider": "moonshot",
+          "model": "kimi-k2-thinking",
+          "label": "Kimi K2 Thinking",
+          "strengths": "Code quality, best practices"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-5.2-codex",
+          "label": "GPT-5.2-Codex",
+          "strengths": "Code review, bug detection"
+        }
+      ]
     },
-    "alternate_executor": {
-      "provider": "moonshot",
-      "model": "kimi-k2-thinking",
-      "label": "Kimi K2 Thinking"
+    "phase_5_reviewer_2": {
+      "description": "Fresh perspective review - architecture, alternatives, blind spots",
+      "user_selection": "required",
+      "run_or_skip": "user_must_explicitly_choose",
+      "options": [
+        {
+          "provider": "anthropic",
+          "model": "opus",
+          "label": "Claude Opus 4.6",
+          "strengths": "Strategic perspective, architectural critique"
+        },
+        {
+          "provider": "google",
+          "model": "gemini-3.1-pro-preview",
+          "label": "Gemini 3.1 Pro",
+          "strengths": "Gap analysis, comprehensive fresh review"
+        },
+        {
+          "provider": "moonshot",
+          "model": "kimi-k2-thinking",
+          "label": "Kimi K2 Thinking",
+          "strengths": "Code-specific fresh perspective"
+        },
+        {
+          "provider": "openai",
+          "model": "gpt-5.2-codex",
+          "label": "GPT-5.2-Codex",
+          "strengths": "General-purpose second opinion"
+        }
+      ],
+      "cost_if_enabled": "+18-25K tokens, +60-90 seconds"
+    }
+  },
+  "token_estimates": {
+    "fast_path": {
+      "phases": "1, 3, 4 (skip 2, 5)",
+      "tokens": "45-55K",
+      "time": "2-3 minutes",
+      "use_when": "Prototypes, MVPs, simple features"
     },
-    "reviewer": {
-      "provider": "openai",
-      "model": "Codex Desktop",
-      "label": "Codex Desktop"
+    "with_plan_review": {
+      "phases": "1, 2, 3, 4 (skip 5)",
+      "tokens": "65-80K",
+      "time": "3-4 minutes",
+      "use_when": "Complex planning needed"
     },
-    "judge": {
-      "provider": "openai",
-      "model": "Codex Desktop",
-      "label": "Codex Desktop"
+    "with_second_review": {
+      "phases": "1, 3, 4, 5 (skip 2)",
+      "tokens": "70-90K",
+      "time": "4-5 minutes",
+      "use_when": "Fresh perspective needed on review"
+    },
+    "full_workflow": {
+      "phases": "1, 2, 3, 4, 5",
+      "tokens": "90-120K",
+      "time": "5-7 minutes",
+      "use_when": "High-stakes tasks, architecture matters"
     }
   }
 }
